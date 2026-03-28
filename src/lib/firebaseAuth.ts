@@ -3,11 +3,16 @@ import {
   FacebookAuthProvider,
   GoogleAuthProvider,
   getAuth,
+  onAuthStateChanged,
   signInWithPopup,
   signOut,
 } from "firebase/auth";
 
 type SocialProviderName = "google" | "facebook";
+const SOCIAL_PROVIDER_IDS: Record<string, SocialProviderName> = {
+  "google.com": "google",
+  "facebook.com": "facebook",
+};
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyBVW6_VxOrMt0gVbDExj8I1SWubk1Crntw",
@@ -21,6 +26,40 @@ const firebaseConfig = {
 
 const firebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 const firebaseAuth = getAuth(firebaseApp);
+
+const waitForAuthState = () =>
+  new Promise<void>((resolve) => {
+    const unsubscribe = onAuthStateChanged(firebaseAuth, () => {
+      unsubscribe();
+      resolve();
+    });
+  });
+
+const buildSocialSession = async () => {
+  await waitForAuthState();
+  const currentUser = firebaseAuth.currentUser;
+  if (!currentUser) {
+    return null;
+  }
+
+  const providerId = currentUser.providerData
+    .map((provider) => provider?.providerId || "")
+    .find((candidate) => candidate in SOCIAL_PROVIDER_IDS);
+
+  if (!providerId) {
+    return null;
+  }
+
+  return {
+    provider: SOCIAL_PROVIDER_IDS[providerId],
+    idToken: await currentUser.getIdToken(true),
+    profile: {
+      email: currentUser.email || "",
+      firstName: currentUser.displayName?.split(" ").filter(Boolean)[0] || "",
+      lastName: currentUser.displayName?.split(" ").slice(1).join(" ") || "",
+    },
+  };
+};
 
 const createProvider = (provider: SocialProviderName) => {
   if (provider === "google") {
@@ -77,8 +116,6 @@ export const signInWithSocialProvider = async (provider: SocialProviderName) => 
       lastName: credential.user.displayName?.split(" ").slice(1).join(" ") || "",
     };
 
-    await signOut(firebaseAuth);
-
     return {
       idToken,
       profile,
@@ -87,4 +124,10 @@ export const signInWithSocialProvider = async (provider: SocialProviderName) => 
     await signOut(firebaseAuth).catch(() => undefined);
     throw new Error(formatProviderError(provider, error));
   }
+};
+
+export const restoreSocialProviderSession = async () => buildSocialSession();
+
+export const clearSocialProviderSession = async () => {
+  await signOut(firebaseAuth).catch(() => undefined);
 };

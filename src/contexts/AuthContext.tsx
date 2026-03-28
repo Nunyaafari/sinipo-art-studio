@@ -1,6 +1,10 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { apiUrl, getNetworkErrorMessage, parseJsonResponse } from '../lib/api';
-import { signInWithSocialProvider } from '../lib/firebaseAuth';
+import {
+  clearSocialProviderSession,
+  restoreSocialProviderSession,
+  signInWithSocialProvider
+} from '../lib/firebaseAuth';
 
 interface User {
   id: number;
@@ -102,6 +106,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const restoreSocialSession = async () => {
+    try {
+      const socialSession = await restoreSocialProviderSession();
+      if (!socialSession) {
+        return false;
+      }
+
+      const response = await fetch(`${API_BASE}/social-login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          provider: socialSession.provider,
+          idToken: socialSession.idToken
+        })
+      });
+
+      const data = await parseJsonResponse<{ success?: boolean; data?: { user: User; token: string } }>(response);
+
+      if (response.ok && data?.success && data.data?.user && data.data?.token) {
+        persistSession(data.data.user, data.data.token);
+        void refreshBootstrapStatus();
+        return true;
+      }
+
+      if (response.status === 401 || response.status === 403) {
+        await clearSocialProviderSession();
+      }
+    } catch (error) {
+      console.error('Social session restore failed:', error);
+    }
+
+    return false;
+  };
+
   // Check if user is authenticated on mount
   useEffect(() => {
     const checkAuth = async () => {
@@ -118,18 +158,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (data?.data) {
               setUser(data.data);
               localStorage.setItem(AUTH_USER_KEY, JSON.stringify(data.data));
+              setIsLoading(false);
+              return;
             }
           } else if (response.status === 401 || response.status === 403) {
             clearSession();
+            const restored = await restoreSocialSession();
+            if (restored) {
+              setIsLoading(false);
+              return;
+            }
           }
         } catch (error) {
           console.error('Auth check failed:', error);
         }
+      } else {
+        const restored = await restoreSocialSession();
+        if (!restored && user) {
+          clearSession();
+        }
       }
+
       setIsLoading(false);
     };
 
-    checkAuth();
+    void checkAuth();
   }, [token]);
 
   useEffect(() => {
@@ -268,6 +321,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
+      await clearSocialProviderSession();
       clearSession();
     }
   };
