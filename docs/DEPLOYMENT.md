@@ -64,6 +64,25 @@ Recommended production pipeline:
 5. Deploy backend with persistent env vars and storage mode
 6. Deploy frontend with `VITE_API_BASE_URL` pointing at the live backend
 
+## Firebase Hosting
+
+The frontend can be deployed to Firebase Hosting with the included config:
+
+- project id: `sinipo-art-studio-627c1`
+- hosting config: [firebase.json](/Users/kwame/Downloads/premium-art-studio-website/firebase.json)
+- project mapping: [.firebaserc](/Users/kwame/Downloads/premium-art-studio-website/.firebaserc)
+
+Recommended flow:
+
+1. Set `VITE_API_BASE_URL` to your live backend URL before deploy
+2. Run `npm run deploy:firebase`
+
+Notes:
+
+- this deploys the Vite frontend only
+- the Express backend should be deployed separately, ideally to Cloud Run
+- keep production media on Cloudinary instead of local uploads
+
 ## Containers
 
 Container artifacts are included for a baseline deployment:

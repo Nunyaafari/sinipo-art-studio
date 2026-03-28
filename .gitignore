@@ -5,6 +5,8 @@ dist/
 .env.production
 coverage/
 .DS_Store
+.firebase/
+firebase-debug.log
 
 backend/node_modules/
 backend/.env

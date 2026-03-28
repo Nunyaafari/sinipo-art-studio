@@ -38,15 +38,37 @@ const PORT = process.env.PORT || 3001;
 const currentFilePath = fileURLToPath(import.meta.url);
 const executedFilePath = process.argv[1] ? path.resolve(process.argv[1]) : null;
 export const runtimeStateReady = initializeRuntimeDatabaseState();
+const googleProjectId = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || '';
+const allowedOrigins = new Set(
+  [
+    ...((process.env.FRONTEND_URL || '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean)),
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    googleProjectId ? `https://${googleProjectId}.web.app` : '',
+    googleProjectId ? `https://${googleProjectId}.firebaseapp.com` : ''
+  ].filter(Boolean)
+);
 
 // Security middleware
 app.use(helmet());
 
 // CORS configuration
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.has(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    credentials: true
+  })
+);
 
 // Rate limiting
 const limiter = rateLimit({
