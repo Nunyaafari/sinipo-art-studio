@@ -120,6 +120,8 @@ const formatDate = (value: string) => {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
 };
 
+const isValidEmailAddress = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+
 const formatInputDate = (date: Date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -615,6 +617,11 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
   const handleBootstrapSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
+    if (!isValidEmailAddress(bootstrapForm.email)) {
+      setBootstrapError("Enter a valid email address to continue.");
+      return;
+    }
+
     if (bootstrapForm.password !== bootstrapForm.confirmPassword) {
       setBootstrapError("Passwords do not match.");
       return;
@@ -819,7 +826,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                   <div className="mt-6 border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{bootstrapError}</div>
                 )}
 
-                <form onSubmit={handleBootstrapSubmit} className="mt-6 space-y-5">
+                <form onSubmit={handleBootstrapSubmit} className="mt-6 space-y-5" noValidate>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="block">
                       <span className="mb-2 block text-[11px] uppercase tracking-[0.18em] text-gray-400">First Name</span>
@@ -846,13 +853,17 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                   <label className="block">
                     <span className="mb-2 block text-[11px] uppercase tracking-[0.18em] text-gray-400">Email Address</span>
                     <input
-                      type="email"
+                      type="text"
                       value={bootstrapForm.email}
                       onChange={(event) => handleBootstrapInputChange("email", event.target.value)}
                       className="w-full border border-gray-200 px-4 py-3 text-sm focus:border-[#c8a830] focus:outline-none"
                       placeholder="owner@yourstudio.com"
+                      autoComplete="email"
                       required
                     />
+                    {bootstrapForm.email.trim().length > 0 && !isValidEmailAddress(bootstrapForm.email) && (
+                      <span className="mt-2 block text-xs text-red-600">Enter a valid email address to continue.</span>
+                    )}
                   </label>
 
                   <div className="grid gap-4 sm:grid-cols-2">

@@ -24,6 +24,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login", onAu
 
   const { login, register, forgotPassword, resetPassword } = useAuth();
 
+  const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+
   useEffect(() => {
     if (isOpen) {
       setMode(initialMode);
@@ -42,6 +44,12 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login", onAu
 
     try {
       let result;
+
+      if ((mode === "login" || mode === "register" || mode === "forgot-password") && !isValidEmail(formData.email)) {
+        setMessage({ type: "error", text: "Enter a valid email address to continue." });
+        setLoading(false);
+        return;
+      }
 
       switch (mode) {
         case "login":
@@ -172,7 +180,11 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login", onAu
             )}
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form
+              onSubmit={handleSubmit}
+              className="space-y-6"
+              noValidate
+            >
               {/* Name fields for registration */}
               {mode === "register" && (
                 <div className="grid grid-cols-2 gap-4">
@@ -211,14 +223,20 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login", onAu
                   EMAIL ADDRESS *
                 </label>
                 <input
-                  type="email"
+                  type="text"
                   value={formData.email}
                   onChange={(e) => handleInputChange("email", e.target.value)}
                   className="w-full border border-gray-200 px-4 py-3 text-sm focus:border-[#c8a830] focus:outline-none transition-colors"
                   style={{ fontFamily: "'Montserrat', sans-serif" }}
                   placeholder="your@email.com"
+                  autoComplete={mode === "login" ? "username" : "email"}
                   required
                 />
+                {(mode === "login" || mode === "register" || mode === "forgot-password") && formData.email.trim().length > 0 && !isValidEmail(formData.email) && (
+                  <p className="mt-2 text-xs text-red-600" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                    Enter a valid email address to continue.
+                  </p>
+                )}
               </div>
 
               {/* Reset token for reset password */}
