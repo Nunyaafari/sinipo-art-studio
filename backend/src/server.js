@@ -14,6 +14,7 @@ import adminMediaRoutes from './routes/admin/media.js';
 import adminSettingsRoutes from './routes/admin/settings.js';
 import adminAuditRoutes from './routes/admin/audit.js';
 import adminUsersRoutes from './routes/admin/users.js';
+import adminCustomersRoutes from './routes/admin/customers.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/user.js';
 import socialRoutes from './routes/social.js';
@@ -124,6 +125,7 @@ app.use('/api/admin/media', adminMediaRoutes);
 app.use('/api/admin/settings', adminSettingsRoutes);
 app.use('/api/admin/audit', adminAuditRoutes);
 app.use('/api/admin/users', adminUsersRoutes);
+app.use('/api/admin/customers', adminCustomersRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

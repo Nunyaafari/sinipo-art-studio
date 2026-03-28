@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Product } from "../data/products";
 import { assetUrl } from "../lib/api";
+import { useWishlist } from "../contexts/WishlistContext";
 
 interface ArtworkCardProps {
   artwork: Product;
@@ -26,12 +27,14 @@ const frameBorder: Record<string, string> = {
 
 export default function ArtworkCard({ artwork, onAddToCart, onViewDetail }: ArtworkCardProps) {
   const [hovered, setHovered] = useState(false);
-  const [liked, setLiked] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
+  const [wishlistPending, setWishlistPending] = useState(false);
+  const { isWishlisted, toggleWishlist } = useWishlist();
   const lowStockThreshold = artwork.lowStockThreshold ?? 3;
   const stockQuantity = Math.max(artwork.stockQuantity ?? 0, 0);
   const isInStock = artwork.inStock !== false && stockQuantity > 0;
   const stockLabel = !isInStock ? "OUT OF STOCK" : stockQuantity <= lowStockThreshold ? `ONLY ${stockQuantity} LEFT` : "IN STOCK";
+  const liked = isWishlisted(artwork.id);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -50,9 +53,15 @@ export default function ArtworkCard({ artwork, onAddToCart, onViewDetail }: Artw
     setTimeout(() => setAddedToCart(false), 2000);
   };
 
-  const handleLike = (e: React.MouseEvent) => {
+  const handleLike = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    setLiked(!liked);
+    if (wishlistPending) {
+      return;
+    }
+
+    setWishlistPending(true);
+    await toggleWishlist(artwork.id);
+    setWishlistPending(false);
   };
 
   // Determine if this is an artwork or fashion item
@@ -128,7 +137,10 @@ export default function ArtworkCard({ artwork, onAddToCart, onViewDetail }: Artw
         {/* Wishlist */}
         <button
           onClick={handleLike}
-          className={`absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-sm transition-all duration-200 hover:bg-white ${liked ? "text-red-500" : "text-gray-400"}`}
+          disabled={wishlistPending}
+          className={`absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-sm transition-all duration-200 hover:bg-white disabled:cursor-wait ${liked ? "text-red-500" : "text-gray-400"}`}
+          aria-label={liked ? "Remove from wishlist" : "Add to wishlist"}
+          title={liked ? "Remove from wishlist" : "Add to wishlist"}
         >
           <svg className="w-4 h-4" fill={liked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />

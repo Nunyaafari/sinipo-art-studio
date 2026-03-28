@@ -5,6 +5,7 @@ import FollowButton from "./FollowButton";
 import ProductRecommendations from "./ProductRecommendations";
 import RecentlyViewed from "./RecentlyViewed";
 import { apiUrl, assetUrl } from "../lib/api";
+import { useWishlist } from "../contexts/WishlistContext";
 
 interface ArtworkDetailProps {
   artwork: Product;
@@ -30,6 +31,7 @@ const frameNames: Record<string, string> = {
 };
 
 export default function ArtworkDetail({ artwork, onBack, onAddToCart, onViewDetail }: ArtworkDetailProps): JSX.Element {
+  const { isWishlisted, toggleWishlist } = useWishlist();
   const galleryImages = useMemo(
     () => Array.from(new Set([artwork.image, ...(artwork.images || [])].filter(Boolean))),
     [artwork.image, artwork.images]
@@ -88,9 +90,11 @@ export default function ArtworkDetail({ artwork, onBack, onAddToCart, onViewDeta
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [wishlistPending, setWishlistPending] = useState(false);
 
   const frames = ["Gold", "Black", "Silver", "White", "Walnut"];
   const displaySku = isArtwork ? artwork.sku : selectedVariant?.sku || artwork.sku;
+  const liked = isWishlisted(artwork.id);
 
   const handleAddToCart = () => {
     if (!isInStock) {
@@ -115,6 +119,16 @@ export default function ArtworkDetail({ artwork, onBack, onAddToCart, onViewDeta
     onAddToCart(productForCart, quantity, isArtwork ? selectedFrame : undefined);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
+  };
+
+  const handleWishlistToggle = async () => {
+    if (wishlistPending) {
+      return;
+    }
+
+    setWishlistPending(true);
+    await toggleWishlist(artwork.id);
+    setWishlistPending(false);
   };
 
   useEffect(() => {
@@ -521,8 +535,17 @@ export default function ArtworkDetail({ artwork, onBack, onAddToCart, onViewDeta
               >
                 {!isInStock ? "OUT OF STOCK" : added ? "✓ ADDED TO CART" : "ADD TO CART"}
               </button>
-              <button className="w-12 h-12 border border-gray-200 flex items-center justify-center hover:border-gray-400 transition-colors text-gray-500 hover:text-red-400">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <button
+                type="button"
+                onClick={handleWishlistToggle}
+                disabled={wishlistPending}
+                className={`w-12 h-12 border border-gray-200 flex items-center justify-center transition-colors ${
+                  liked ? "text-red-500 border-red-200" : "text-gray-500 hover:border-gray-400 hover:text-red-400"
+                } disabled:cursor-wait`}
+                aria-label={liked ? "Remove from wishlist" : "Add to wishlist"}
+                title={liked ? "Remove from wishlist" : "Add to wishlist"}
+              >
+                <svg className="w-5 h-5" fill={liked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                 </svg>
               </button>

@@ -14,7 +14,7 @@ import {
   normalizeString
 } from '../../utils/validation.js';
 
-const MANAGED_ROLES = ['admin', 'manager', 'admin_viewer', 'user'];
+const MANAGED_ROLES = ['admin', 'manager', 'admin_viewer'];
 const serializableUserFields = [
   'id',
   'email',
@@ -47,8 +47,7 @@ const buildUserStats = (userList) => ({
   verified: userList.filter((user) => user.isVerified).length,
   admins: userList.filter((user) => user.role === 'admin').length,
   managers: userList.filter((user) => user.role === 'manager').length,
-  viewers: userList.filter((user) => user.role === 'admin_viewer').length,
-  customers: userList.filter((user) => user.role === 'user').length
+  viewers: userList.filter((user) => user.role === 'admin_viewer').length
 });
 
 const getNextUserId = () => Math.max(0, ...users.map((user) => getSafeUserId(user))) + 1;
@@ -62,6 +61,7 @@ const getFilteredUsers = ({ search = '', role = 'all' } = {}) => {
   const normalizedSearch = normalizeString(search).toLowerCase();
 
   return users
+    .filter((user) => MANAGED_ROLES.includes(user?.role))
     .filter((user) => normalizeEmail(user?.email))
     .filter((user) => {
       if (role !== 'all' && user.role !== role) {
@@ -117,7 +117,7 @@ export const getAdminUsers = async (req, res) => {
 
 export const createAdminUser = async (req, res) => {
   try {
-    const { email, password, firstName, lastName, role = 'user', isVerified = true } = req.body;
+    const { email, password, firstName, lastName, role = 'admin_viewer', isVerified = true } = req.body;
     assertRequiredFields(req.body, [
       { key: 'email', label: 'email' },
       { key: 'password', label: 'password' },

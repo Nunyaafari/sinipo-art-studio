@@ -316,7 +316,7 @@ const settingsTabs = [
   { id: "commerce", label: "Commerce", description: "Shipping, tax, payment, and inventory." },
   { id: "homepage", label: "Homepage", description: "Section toggles and copy blocks." },
   { id: "seo", label: "SEO", description: "Default metadata and organization details." },
-  { id: "team", label: "Team Access", description: "Admins, managers, and view-only backend users." },
+  { id: "team", label: "Team Access", description: "Backend staff only: Admins, managers, and viewers." },
   { id: "discounts", label: "Discounts", description: "Offers, promo codes, and campaign controls." },
   { id: "audit", label: "Audit Trail", description: "Privileged changes and backend activity." },
 ] as const;
@@ -524,7 +524,7 @@ export default function SettingsManagement({ onBack, initialTab = "commerce" }: 
               Settings Center
             </h1>
             <p className="mt-3 max-w-2xl text-sm text-white/70">
-              A cleaner tabbed layout for storefront controls, team access, homepage copy, and SEO defaults.
+              A cleaner tabbed layout for storefront controls, backend team access, homepage copy, and SEO defaults.
             </p>
           </div>
 

@@ -15,6 +15,7 @@ import OrderManagement from "./components/OrderManagement";
 import BlogManagement from "./components/BlogManagement";
 import MediaManagement from "./components/MediaManagement";
 import SettingsManagement from "./components/SettingsManagement";
+import CustomerCRM from "./components/CustomerCRM";
 import BlogPage from "./components/BlogPage";
 import AuthModal from "./components/AuthModal";
 import UserProfile from "./components/UserProfile";
@@ -28,6 +29,8 @@ import AnalyticsDashboard from "./components/AnalyticsDashboard";
 import WaitlistModal from "./components/WaitlistModal";
 import type { Product } from "./data/products";
 import { trackPageView } from "./lib/analytics";
+import { WishlistProvider } from "./contexts/WishlistContext";
+import { canManageAdminSettings, hasAdminPanelAccess } from "./lib/admin";
 
 interface CartItem {
   id: string;
@@ -42,14 +45,59 @@ interface ReorderItem {
   selectedVariantId?: string;
 }
 
+const CART_STORAGE_KEY = "sinipoCart";
+
+const loadStoredCart = (): CartItem[] => {
+  const rawValue = localStorage.getItem(CART_STORAGE_KEY);
+  if (!rawValue) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.filter((item): item is CartItem => {
+      return (
+        item &&
+        typeof item.id === "string" &&
+        item.artwork &&
+        typeof item.artwork === "object" &&
+        typeof item.quantity === "number" &&
+        Number.isFinite(item.quantity) &&
+        item.quantity > 0
+      );
+    });
+  } catch {
+    localStorage.removeItem(CART_STORAGE_KEY);
+    return [];
+  }
+};
+
+const getStoredRole = () => {
+  const rawUser = localStorage.getItem("authUser");
+  if (!rawUser) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(rawUser)?.role ?? null;
+  } catch {
+    return null;
+  }
+};
+
 export default function App() {
   const [activePage, setActivePage] = useState("home");
   const [productReturnPage, setProductReturnPage] = useState("home");
   const [cartOpen, setCartOpen] = useState(false);
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [cartItems, setCartItems] = useState<CartItem[]>(() => loadStoredCart());
   const [selectedArtwork, setSelectedArtwork] = useState<Product | null>(null);
   const [showCheckout, setShowCheckout] = useState(false);
   const [showOrderManagement, setShowOrderManagement] = useState(false);
+  const [showCustomerCRM, setShowCustomerCRM] = useState(false);
   const [showBlogManagement, setShowBlogManagement] = useState(false);
   const [showMediaManagement, setShowMediaManagement] = useState(false);
   const [showSettingsManagement, setShowSettingsManagement] = useState(false);
@@ -76,6 +124,8 @@ export default function App() {
       pageSegments.push("profile");
     } else if (showOrderManagement) {
       pageSegments.push("admin-orders");
+    } else if (showCustomerCRM) {
+      pageSegments.push("admin-crm");
     } else if (showBlogManagement) {
       pageSegments.push("admin-blog");
     } else if (showMediaManagement) {
@@ -93,6 +143,7 @@ export default function App() {
     showCheckout,
     showUserProfile,
     showOrderManagement,
+    showCustomerCRM,
     showBlogManagement,
     showMediaManagement,
     showSettingsManagement,
@@ -100,24 +151,59 @@ export default function App() {
     showAnalyticsDashboard
   ]);
 
+  useEffect(() => {
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
+  }, [cartItems]);
+
+  const openLoginModal = (mode: "login" | "register") => {
+    setAuthModalMode(mode);
+    setShowAuthModal(true);
+  };
+
+  const openProfile = () => {
+    setShowUserProfile(true);
+    setShowCheckout(false);
+    setShowOrderManagement(false);
+    setShowCustomerCRM(false);
+    setShowBlogManagement(false);
+    setShowMediaManagement(false);
+    setShowSettingsManagement(false);
+    setShowAnalyticsDashboard(false);
+  };
+
+  const ensureAdminNavigation = (mode: "panel" | "settings") => {
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      openLoginModal("login");
+      return false;
+    }
+
+    const role = getStoredRole();
+    const hasAccess = mode === "settings" ? canManageAdminSettings(role) : hasAdminPanelAccess(role);
+
+    if (!hasAccess) {
+      openProfile();
+      return false;
+    }
+
+    return true;
+  };
+
   const handleNavigate = (page: string) => {
     if (page === "login") {
-      setAuthModalMode("login");
-      setShowAuthModal(true);
+      openLoginModal("login");
       return;
     }
     if (page === "register") {
-      setAuthModalMode("register");
-      setShowAuthModal(true);
+      openLoginModal("register");
       return;
     }
     if (page === "profile") {
       if (!localStorage.getItem("authToken")) {
-        setAuthModalMode("login");
-        setShowAuthModal(true);
+        openLoginModal("login");
         return;
       }
-      setShowUserProfile(true);
+      openProfile();
       return;
     }
     if (page === "contact") {
@@ -129,39 +215,96 @@ export default function App() {
       return;
     }
     if (page === "analytics") {
+      if (!ensureAdminNavigation("panel")) {
+        return;
+      }
       setShowAnalyticsDashboard(true);
+      setShowOrderManagement(false);
+      setShowCustomerCRM(false);
       return;
     }
     if (page === "orders") {
+      if (!ensureAdminNavigation("panel")) {
+        return;
+      }
       setShowOrderManagement(true);
+      setShowCustomerCRM(false);
+      setShowAnalyticsDashboard(false);
+      setShowBlogManagement(false);
+      setShowMediaManagement(false);
+      setShowSettingsManagement(false);
+      setShowUserProfile(false);
+      return;
+    }
+    if (page === "crm") {
+      if (!ensureAdminNavigation("panel")) {
+        return;
+      }
+      setShowCustomerCRM(true);
+      setShowOrderManagement(false);
+      setShowAnalyticsDashboard(false);
+      setShowBlogManagement(false);
+      setShowMediaManagement(false);
+      setShowSettingsManagement(false);
+      setShowUserProfile(false);
       return;
     }
     if (page === "discounts") {
+      if (!ensureAdminNavigation("settings")) {
+        return;
+      }
       setSettingsInitialTab("discounts");
       setShowSettingsManagement(true);
+      setShowOrderManagement(false);
+      setShowCustomerCRM(false);
       return;
     }
     if (page === "blog-management") {
+      if (!ensureAdminNavigation("panel")) {
+        return;
+      }
       setShowBlogManagement(true);
+      setShowOrderManagement(false);
+      setShowCustomerCRM(false);
       return;
     }
     if (page === "media-management") {
+      if (!ensureAdminNavigation("panel")) {
+        return;
+      }
       setShowMediaManagement(true);
+      setShowOrderManagement(false);
+      setShowCustomerCRM(false);
       return;
     }
     if (page === "settings") {
+      if (!ensureAdminNavigation("settings")) {
+        return;
+      }
       setSettingsInitialTab("commerce");
       setShowSettingsManagement(true);
+      setShowOrderManagement(false);
+      setShowCustomerCRM(false);
       return;
     }
     if (page === "audit-logs") {
+      if (!ensureAdminNavigation("settings")) {
+        return;
+      }
       setSettingsInitialTab("audit");
       setShowSettingsManagement(true);
+      setShowOrderManagement(false);
+      setShowCustomerCRM(false);
       return;
     }
     if (page === "users") {
+      if (!ensureAdminNavigation("settings")) {
+        return;
+      }
       setSettingsInitialTab("team");
       setShowSettingsManagement(true);
+      setShowOrderManagement(false);
+      setShowCustomerCRM(false);
       return;
     }
     if (page === "waitlist") {
@@ -173,6 +316,7 @@ export default function App() {
     setSelectedArtwork(null);
     setShowCheckout(false);
     setShowOrderManagement(false);
+    setShowCustomerCRM(false);
     setShowBlogManagement(false);
     setShowMediaManagement(false);
     setShowSettingsManagement(false);
@@ -378,6 +522,10 @@ export default function App() {
       return <BlogManagement onBack={() => setShowBlogManagement(false)} />;
     }
 
+    if (showCustomerCRM) {
+      return <CustomerCRM onBack={() => setShowCustomerCRM(false)} />;
+    }
+
     // Show media management
     if (showMediaManagement) {
       return <MediaManagement onBack={() => setShowMediaManagement(false)} />;
@@ -456,52 +604,53 @@ export default function App() {
 
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-[#fafaf8]" style={{ fontFamily: "'Montserrat', sans-serif" }}>
-        <Navbar
-          cartCount={totalCartItems}
-          onCartOpen={() => setCartOpen(true)}
-          activePage={activePage}
-          onNavigate={handleNavigate}
-        />
+      <WishlistProvider>
+        <div className="min-h-screen bg-[#fafaf8]" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+          <Navbar
+            cartCount={totalCartItems}
+            onCartOpen={() => setCartOpen(true)}
+            activePage={activePage}
+            onNavigate={handleNavigate}
+          />
 
-        <main>{renderPage()}</main>
+          <main>{renderPage()}</main>
 
-        {/* Footer only on non-home pages or on home */}
-        <Footer onNavigate={handleNavigate} />
+          {/* Footer only on non-home pages or on home */}
+          <Footer onNavigate={handleNavigate} />
 
-        <CartSidebar
-          isOpen={cartOpen}
-          onClose={() => setCartOpen(false)}
-          items={cartItems}
-          onRemove={handleRemoveFromCart}
-          onUpdateQty={handleUpdateQty}
-          onCheckout={handleCheckout}
-        />
+          <CartSidebar
+            isOpen={cartOpen}
+            onClose={() => setCartOpen(false)}
+            items={cartItems}
+            onRemove={handleRemoveFromCart}
+            onUpdateQty={handleUpdateQty}
+            onCheckout={handleCheckout}
+          />
 
-        <AuthModal
-          isOpen={showAuthModal}
-          onClose={() => setShowAuthModal(false)}
-          initialMode={authModalMode}
-          onAuthSuccess={handleCustomerAuthSuccess}
-        />
+          <AuthModal
+            isOpen={showAuthModal}
+            onClose={() => setShowAuthModal(false)}
+            initialMode={authModalMode}
+            onAuthSuccess={handleCustomerAuthSuccess}
+          />
 
-        <LiveChat
-          isOpen={showLiveChat}
-          onClose={() => setShowLiveChat(false)}
-        />
+          <LiveChat
+            isOpen={showLiveChat}
+            onClose={() => setShowLiveChat(false)}
+          />
 
-        {/* Live Chat Button */}
-        {!showLiveChat && (
-          <button
-            onClick={() => setShowLiveChat(true)}
-            className="fixed bottom-6 right-6 w-14 h-14 bg-[#c8a830] text-white rounded-full shadow-lg hover:bg-[#0a0a0a] transition-colors z-40 flex items-center justify-center"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-          </button>
-        )}
-      </div>
+          {!showLiveChat && (
+            <button
+              onClick={() => setShowLiveChat(true)}
+              className="fixed bottom-6 right-6 w-14 h-14 bg-[#c8a830] text-white rounded-full shadow-lg hover:bg-[#0a0a0a] transition-colors z-40 flex items-center justify-center"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </WishlistProvider>
     </AuthProvider>
   );
 }

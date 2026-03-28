@@ -30,14 +30,12 @@ interface UserStats {
   admins: number;
   managers: number;
   viewers: number;
-  customers: number;
 }
 
 const roleOptions = [
   { value: "admin", label: "Admin" },
   { value: "manager", label: "Manager" },
   { value: "admin_viewer", label: "Viewer" },
-  { value: "user", label: "Customer" },
 ] as const;
 
 const roleBadgeMap: Record<string, string> = {
@@ -323,7 +321,7 @@ export default function UserManagement({ onBack, embedded = false }: UserManagem
             Admin permission required
           </h2>
           <p className="mt-4 text-sm text-gray-600">
-            Managers and view-only users can use the backend, but only Admin users can manage accounts and roles.
+            Managers and view-only users can use the backend, but only Admin users can manage backend accounts and roles.
           </p>
         </div>
       );
@@ -340,7 +338,7 @@ export default function UserManagement({ onBack, embedded = false }: UserManagem
             Admin permission required
           </h1>
           <p className="mt-4 text-sm text-gray-600">
-            Managers and view-only users can use the backend, but only Admin users can manage accounts and roles.
+            Managers and view-only users can use the backend, but only Admin users can manage backend accounts and roles.
           </p>
           <button
             onClick={handleBack}
@@ -354,14 +352,13 @@ export default function UserManagement({ onBack, embedded = false }: UserManagem
   }
 
   const statsSection = stats ? (
-    <div className="grid grid-cols-2 gap-4 xl:grid-cols-6">
+    <div className="grid grid-cols-2 gap-4 xl:grid-cols-5">
         {[
           { label: "Total Users", value: stats.total },
           { label: "Verified", value: stats.verified },
           { label: "Admins", value: stats.admins },
           { label: "Managers", value: stats.managers },
           { label: "Viewers", value: stats.viewers },
-          { label: "Customers", value: stats.customers },
         ].map((card) => (
         <div key={card.label} className="border border-black/10 bg-white px-4 py-5">
           <p className="text-[11px] uppercase tracking-[0.18em] text-gray-400">{card.label}</p>
@@ -385,7 +382,7 @@ export default function UserManagement({ onBack, embedded = false }: UserManagem
             className="mt-2 text-3xl font-light text-[#111]"
             style={{ fontFamily: "'Cormorant Garamond', serif" }}
           >
-            Add a team or customer account
+            Add a backend account
           </h2>
         </div>
 
@@ -444,7 +441,7 @@ export default function UserManagement({ onBack, embedded = false }: UserManagem
         </form>
 
         <div className="mt-6 border border-[#d8c06a]/30 bg-[#fbf7ea] p-4 text-sm text-[#6f5a17]">
-          Admin has full control. Manager can edit operational areas. Viewer can sign into the backend in read-only mode. Customer accounts shop the storefront only and do not receive admin access.
+          Admin has full control. Manager can edit operational areas. Viewer can sign into the backend in read-only mode. Customer accounts are now handled separately inside CRM.
         </div>
       </section>
 
@@ -457,7 +454,7 @@ export default function UserManagement({ onBack, embedded = false }: UserManagem
                 className="mt-2 text-3xl font-light text-[#111]"
                 style={{ fontFamily: "'Cormorant Garamond', serif" }}
               >
-                Users and roles
+                Backend users and roles
               </h2>
             </div>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-[220px_180px]">

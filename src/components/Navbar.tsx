@@ -30,6 +30,7 @@ export default function Navbar({ cartCount, onCartOpen, activePage, onNavigate }
 
   const iconColor = scrolled || activePage !== "home" ? "text-[#333]" : "text-white";
   const accountDestination = hasAdminPanelAccess(user?.role) ? "admin" : "profile";
+  const accountButtonLabel = hasAdminPanelAccess(user?.role) ? "ADMIN DASHBOARD" : "MY ACCOUNT";
 
   return (
     <header
@@ -125,7 +126,7 @@ export default function Navbar({ cartCount, onCartOpen, activePage, onNavigate }
                         className="w-full text-left border border-gray-200 px-4 py-3 text-xs tracking-[0.16em] text-gray-700 hover:border-[#c8a830] hover:text-[#c8a830] transition-colors"
                         style={{ fontFamily: "'Montserrat', sans-serif" }}
                       >
-                        MY ORDERS & CRM
+                        {accountButtonLabel}
                       </button>
                       <button
                         onClick={() => {
@@ -142,7 +143,7 @@ export default function Navbar({ cartCount, onCartOpen, activePage, onNavigate }
                 ) : (
                   <>
                     <p className="text-[11px] tracking-[0.18em] text-gray-400 mb-3" style={{ fontFamily: "'Montserrat', sans-serif" }}>
-                      CUSTOMER CRM
+                      CUSTOMER ACCOUNT
                     </p>
                     <p className="text-sm text-gray-600 mb-4">
                       Sign in to track orders, save addresses, manage payment methods, and view certificates.

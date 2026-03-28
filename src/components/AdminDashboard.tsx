@@ -205,10 +205,11 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
     () => [
       { id: "products", eyebrow: "Catalog", label: "Products", description: "Jump straight into product management and open the catalog form.", tone: "bg-[#fbf7ea]", locked: false },
       { id: "orders", eyebrow: "Ops", label: "Orders", description: "Track fulfillment and customer payment states.", tone: "bg-white", locked: !canEdit },
+      { id: "crm", eyebrow: "Clients", label: "CRM", description: "Review customer details, spend, loyalty, and browsing activity.", tone: "bg-[#fbf7ea]", locked: false },
       { id: "blog-management", eyebrow: "Editorial", label: "Blog", description: "Edit editorial posts and product-linked stories.", tone: "bg-white", locked: !canEdit },
       { id: "media-management", eyebrow: "Assets", label: "Media", description: "Manage uploads, alt text, and library reuse.", tone: "bg-white", locked: !canEdit },
       { id: "analytics", eyebrow: "Insight", label: "Analytics", description: "Review revenue, traffic, and inventory movement.", tone: "bg-[#fbf7ea]", locked: false },
-      { id: "settings", eyebrow: "Control", label: "Settings", description: "Storefront configuration, tabs, and team access in one place.", tone: "bg-white", locked: !canManageAdminSettings(user?.role) },
+      { id: "settings", eyebrow: "Control", label: "Settings", description: "Storefront configuration plus backend team access only.", tone: "bg-white", locked: !canManageAdminSettings(user?.role) },
     ],
     [canEdit, user?.role]
   );
