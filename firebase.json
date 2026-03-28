@@ -1,4 +1,20 @@
 {
+  "apphosting": [
+    {
+      "backendId": "sinipo-art-api",
+      "rootDir": "./backend",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "backend/node_modules",
+        "backend/uploads",
+        "backend/backups",
+        "backend/src/storage/persistent-data.json"
+      ]
+    }
+  ],
   "hosting": {
     "public": "dist",
     "ignore": [

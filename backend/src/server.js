@@ -38,7 +38,14 @@ const PORT = process.env.PORT || 3001;
 const currentFilePath = fileURLToPath(import.meta.url);
 const executedFilePath = process.argv[1] ? path.resolve(process.argv[1]) : null;
 export const runtimeStateReady = initializeRuntimeDatabaseState();
-const googleProjectId = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || '';
+const firebaseProjectId = (() => {
+  try {
+    return JSON.parse(process.env.FIREBASE_CONFIG || '{}').projectId || '';
+  } catch {
+    return '';
+  }
+})();
+const googleProjectId = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || firebaseProjectId || '';
 const allowedOrigins = new Set(
   [
     ...((process.env.FRONTEND_URL || '')
@@ -64,7 +71,7 @@ app.use(
         return;
       }
 
-      callback(new Error(`CORS blocked for origin: ${origin}`));
+      callback(null, false);
     },
     credentials: true
   })

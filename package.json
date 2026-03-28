@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy:firebase": "firebase deploy --only hosting",
+    "deploy:firebase": "VITE_API_BASE_URL=https://sinipo-art-api--sinipo-art-studio-627c1.us-east4.hosted.app firebase deploy --only hosting",
     "test:backend": "cd backend && npm test",
     "backup:runtime": "cd backend && npm run backup:runtime"
   },
