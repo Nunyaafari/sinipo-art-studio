@@ -37,6 +37,13 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login", onAu
     setMessage(null);
   };
 
+  const handleUnavailableSocialLogin = (provider: "Google" | "Facebook") => {
+    setMessage({
+      type: "error",
+      text: `${provider} sign-in is not configured yet. Please use email and password for now.`,
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -393,6 +400,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login", onAu
                 <div className="mt-6 grid grid-cols-2 gap-4">
                   <button
                     type="button"
+                    onClick={() => handleUnavailableSocialLogin("Google")}
                     className="flex items-center justify-center gap-2 border border-gray-200 py-3 text-xs tracking-wider text-gray-600 hover:border-gray-400 transition-colors"
                     style={{ fontFamily: "'Montserrat', sans-serif" }}
                   >
@@ -406,6 +414,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login", onAu
                   </button>
                   <button
                     type="button"
+                    onClick={() => handleUnavailableSocialLogin("Facebook")}
                     className="flex items-center justify-center gap-2 border border-gray-200 py-3 text-xs tracking-wider text-gray-600 hover:border-gray-400 transition-colors"
                     style={{ fontFamily: "'Montserrat', sans-serif" }}
                   >
@@ -415,6 +424,13 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login", onAu
                     FACEBOOK
                   </button>
                 </div>
+
+                <p
+                  className="mt-3 text-center text-[11px] tracking-[0.12em] text-gray-400"
+                  style={{ fontFamily: "'Montserrat', sans-serif" }}
+                >
+                  Social sign-in will appear here after Google and Facebook auth are configured.
+                </p>
               </div>
             )}
           </div>

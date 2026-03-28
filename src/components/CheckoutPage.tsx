@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Product } from "../data/products";
 import { apiUrl, assetUrl, getNetworkErrorMessage } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
@@ -92,6 +92,7 @@ export default function CheckoutPage({ items, onBack, onSuccess, onUpdateQty }: 
     guestCheckoutEnabled: true,
     checkoutNotice: "All payments are securely processed and confirmed before fulfillment begins."
   });
+  const paymentActionRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setCustomerInfo((prev) => ({
@@ -155,11 +156,16 @@ export default function CheckoutPage({ items, onBack, onSuccess, onUpdateQty }: 
     setCustomerInfo(prev => ({ ...prev, [field]: value }));
   };
 
+  const revealPaymentError = (message: string) => {
+    setError(message);
+    paymentActionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
   const validateForm = (): boolean => {
     const validationError = validateCheckoutPayload(customerInfo, items.length);
 
     if (validationError) {
-      setError(validationError);
+      revealPaymentError(validationError);
       return false;
     }
 
@@ -215,7 +221,7 @@ export default function CheckoutPage({ items, onBack, onSuccess, onUpdateQty }: 
     if (!validateForm()) return;
 
     if (!isAuthenticated && !paymentConfig.guestCheckoutEnabled) {
-      setError("Please sign in to complete checkout.");
+      revealPaymentError("Please sign in to complete checkout.");
       return;
     }
 
@@ -297,12 +303,6 @@ export default function CheckoutPage({ items, onBack, onSuccess, onUpdateQty }: 
             >
               Customer Information
             </h2>
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6 text-sm">
-                {error}
-              </div>
-            )}
 
             <div className="bg-white border border-gray-100 px-5 py-4 mb-6">
               <p className="text-[11px] tracking-[0.18em] text-gray-400 mb-1" style={{ fontFamily: "'Montserrat', sans-serif" }}>
@@ -656,18 +656,26 @@ export default function CheckoutPage({ items, onBack, onSuccess, onUpdateQty }: 
               </div>
 
               {/* Payment Button */}
-              <button
-                onClick={handlePayment}
-                disabled={loading}
-                className={`w-full py-4 text-sm tracking-[0.2em] font-medium transition-all duration-300 ${
-                  loading
-                    ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-                    : "bg-[#0a0a0a] text-white hover:bg-[#c8a830]"
-                }`}
-                style={{ fontFamily: "'Montserrat', sans-serif" }}
-              >
-                {loading ? "PROCESSING..." : `PAY ${formatMoney(total)}`}
-              </button>
+              <div ref={paymentActionRef}>
+                <button
+                  onClick={handlePayment}
+                  disabled={loading}
+                  className={`w-full py-4 text-sm tracking-[0.2em] font-medium transition-all duration-300 ${
+                    loading
+                      ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                      : "bg-[#0a0a0a] text-white hover:bg-[#c8a830]"
+                  }`}
+                  style={{ fontFamily: "'Montserrat', sans-serif" }}
+                >
+                  {loading ? "PROCESSING..." : `PAY ${formatMoney(total)}`}
+                </button>
+
+                {error && (
+                  <div className="mt-3 border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {error}
+                  </div>
+                )}
+              </div>
 
               <div className="mt-4 border border-gray-100 bg-[#fafaf8] px-4 py-3">
                 <p
