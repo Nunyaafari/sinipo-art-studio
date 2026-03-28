@@ -8,6 +8,7 @@ import {
   createDefaultMediaAssets
 } from './adminSeedData.js';
 import { createDefaultStorefrontSettings } from '../config/storefrontSettings.js';
+import { isDatabaseConfigured } from '../config/database.js';
 
 const storageDir = path.dirname(fileURLToPath(import.meta.url));
 const storageFile = path.join(storageDir, 'persistent-data.json');
@@ -107,7 +108,14 @@ const ensureStorageFile = () => {
   }
 };
 
+const shouldPersistRuntimeToFile = () =>
+  process.env.PERSIST_RUNTIME_TO_FILE === 'true' || !isDatabaseConfigured;
+
 const loadState = () => {
+  if (!shouldPersistRuntimeToFile()) {
+    return createDefaultState();
+  }
+
   ensureStorageFile();
 
   try {
@@ -190,8 +198,10 @@ export const registerPersistentStateSaveHook = (callback) => {
 };
 
 export const savePersistentState = ({ notifyHooks = true } = {}) => {
-  ensureStorageFile();
-  fs.writeFileSync(storageFile, JSON.stringify(state, null, 2), 'utf8');
+  if (shouldPersistRuntimeToFile()) {
+    ensureStorageFile();
+    fs.writeFileSync(storageFile, JSON.stringify(state, null, 2), 'utf8');
+  }
 
   if (!notifyHooks) {
     return;
@@ -212,7 +222,7 @@ export const persistentState = state;
 export const hydratePersistentState = (snapshot, options = {}) => {
   applyStateSnapshot(snapshot);
 
-  if (options.persistToFile !== false) {
+  if (options.persistToFile !== false && shouldPersistRuntimeToFile()) {
     savePersistentState({
       notifyHooks: options.notifyHooks !== true ? false : true
     });
@@ -264,3 +274,4 @@ export const removeUserBucketValue = (bucketName, userId) => {
 };
 
 export const getStorageFilePath = () => storageFile;
+export const isRuntimeFilePersistenceEnabled = () => shouldPersistRuntimeToFile();

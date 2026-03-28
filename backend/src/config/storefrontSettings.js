@@ -87,6 +87,14 @@ export const createDefaultStorefrontSettings = () => ({
   inventory: {
     lowStockThreshold: asNumber(process.env.LOW_STOCK_THRESHOLD, 3)
   },
+  media: {
+    uploadStorage: process.env.UPLOAD_STORAGE === 'cloudinary' ? 'cloudinary' : 'local',
+    backendPublicUrl: process.env.BACKEND_PUBLIC_URL || process.env.MEDIA_BASE_URL || '',
+    cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
+    cloudinaryApiKey: process.env.CLOUDINARY_API_KEY || '',
+    cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET || '',
+    cloudinaryFolder: process.env.CLOUDINARY_FOLDER || 'sinipo-art'
+  },
   homepage: {
     showCategoryShowcase: true,
     showFeatured: true,
@@ -234,6 +242,20 @@ export const sanitizeStorefrontSettings = (input = {}) => {
         1,
         asNumber(source.inventory?.lowStockThreshold, defaults.inventory.lowStockThreshold)
       )
+    },
+    media: {
+      uploadStorage: source.media?.uploadStorage === 'cloudinary' ? 'cloudinary' : 'local',
+      backendPublicUrl: asString(source.media?.backendPublicUrl, defaults.media.backendPublicUrl),
+      cloudinaryCloudName: asString(
+        source.media?.cloudinaryCloudName,
+        defaults.media.cloudinaryCloudName
+      ),
+      cloudinaryApiKey: asString(source.media?.cloudinaryApiKey, defaults.media.cloudinaryApiKey),
+      cloudinaryApiSecret: asString(
+        source.media?.cloudinaryApiSecret,
+        defaults.media.cloudinaryApiSecret
+      ),
+      cloudinaryFolder: asString(source.media?.cloudinaryFolder, defaults.media.cloudinaryFolder)
     },
     homepage: {
       showCategoryShowcase: asBoolean(source.homepage?.showCategoryShowcase, defaults.homepage.showCategoryShowcase),

@@ -7,6 +7,7 @@ export const getTaxSettings = () => getStorefrontSettings().tax;
 export const getPaymentSettings = () => getStorefrontSettings().payment;
 export const getEmailSettings = () => getStorefrontSettings().email;
 export const getInventorySettings = () => getStorefrontSettings().inventory;
+export const getMediaSettings = () => getStorefrontSettings().media;
 export const getHomepageSettings = () => getStorefrontSettings().homepage;
 export const getSeoSettings = () => getStorefrontSettings().seo;
 

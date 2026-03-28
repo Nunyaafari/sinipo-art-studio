@@ -6,6 +6,7 @@ import {
   getMediaAssetsState,
   savePersistentState
 } from '../storage/persistentState.js';
+import { deleteFromCloudinary } from '../config/upload.js';
 
 const mediaAssets = getMediaAssetsState();
 
@@ -281,7 +282,7 @@ const localPathFromAssetUrl = (url) => {
   return path.join(process.cwd(), url.replace(/^\//, ''));
 };
 
-export const deleteMediaAsset = (id) => {
+export const deleteMediaAsset = async (id) => {
   const assetIndex = mediaAssets.findIndex((asset) => asset.id === Number.parseInt(id, 10));
   if (assetIndex === -1) {
     throw new Error('Media asset not found');
@@ -296,6 +297,13 @@ export const deleteMediaAsset = (id) => {
   const localPath = localPathFromAssetUrl(asset.url);
   if (localPath && fs.existsSync(localPath)) {
     fs.unlinkSync(localPath);
+  }
+
+  if (asset.publicId && asset.storageType === 'cloudinary') {
+    const cloudinaryResult = await deleteFromCloudinary(asset.publicId);
+    if (!cloudinaryResult.success && !cloudinaryResult.skipped) {
+      throw new Error(cloudinaryResult.error || 'Failed to delete Cloudinary asset');
+    }
   }
 
   const [deletedAsset] = mediaAssets.splice(assetIndex, 1);

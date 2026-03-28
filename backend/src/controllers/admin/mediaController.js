@@ -104,7 +104,7 @@ export const patchMediaAsset = async (req, res) => {
 export const removeMediaAsset = async (req, res) => {
   try {
     const existingAsset = getMediaAssetById(req.params.id);
-    const deletedAsset = deleteMediaAsset(req.params.id);
+    const deletedAsset = await deleteMediaAsset(req.params.id);
     recordAdminAudit(req, {
       action: 'media.delete',
       targetType: 'mediaAsset',

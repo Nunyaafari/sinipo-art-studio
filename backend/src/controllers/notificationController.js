@@ -1,8 +1,10 @@
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import { getEmailSettings } from '../config/storefront.js';
+import { getFrontendAppUrl } from '../config/appUrls.js';
 
 dotenv.config();
+const frontendAppUrl = getFrontendAppUrl();
 
 // Create email transporter
 const createTransporter = () => {
@@ -67,7 +69,7 @@ const emailTemplates = {
           </p>
           
           <div style="text-align: center; margin-top: 30px;">
-            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}" 
+            <a href="${frontendAppUrl}" 
                style="background: #0a0a0a; color: white; padding: 12px 30px; text-decoration: none; font-size: 12px; letter-spacing: 2px;">
               VISIT STORE
             </a>
@@ -164,7 +166,7 @@ const emailTemplates = {
           </div>
           
           <div style="text-align: center; margin-top: 30px;">
-            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}" 
+            <a href="${frontendAppUrl}" 
                style="background: #0a0a0a; color: white; padding: 12px 30px; text-decoration: none; font-size: 12px; letter-spacing: 2px;">
               START SHOPPING
             </a>
@@ -198,7 +200,7 @@ const emailTemplates = {
             You received this email because you subscribed to our newsletter.
           </p>
           <p style="color: #999; font-size: 12px; margin: 5px 0 0 0;">
-            <a href="${process.env.FRONTEND_URL}/unsubscribe?email=${email}" style="color: #c8a830;">Unsubscribe</a>
+            <a href="${frontendAppUrl}/unsubscribe?email=${email}" style="color: #c8a830;">Unsubscribe</a>
           </p>
         </div>
       </div>

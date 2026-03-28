@@ -59,6 +59,14 @@ interface StorefrontSettings {
   inventory: {
     lowStockThreshold: number;
   };
+  media: {
+    uploadStorage: "local" | "cloudinary";
+    backendPublicUrl: string;
+    cloudinaryCloudName: string;
+    cloudinaryApiKey: string;
+    cloudinaryApiSecret: string;
+    cloudinaryFolder: string;
+  };
   homepage: {
     showCategoryShowcase: boolean;
     showFeatured: boolean;
@@ -153,6 +161,14 @@ const defaultSettings: StorefrontSettings = {
   },
   inventory: {
     lowStockThreshold: 3,
+  },
+  media: {
+    uploadStorage: "local",
+    backendPublicUrl: "",
+    cloudinaryCloudName: "",
+    cloudinaryApiKey: "",
+    cloudinaryApiSecret: "",
+    cloudinaryFolder: "sinipo-art",
   },
   homepage: {
     showCategoryShowcase: true,
@@ -357,6 +373,7 @@ export default function SettingsManagement({ onBack, initialTab = "commerce" }: 
           payment: { ...defaultSettings.payment, ...data.data?.payment },
           email: { ...defaultSettings.email, ...data.data?.email },
           inventory: { ...defaultSettings.inventory, ...data.data?.inventory },
+          media: { ...defaultSettings.media, ...data.data?.media },
           homepage: { ...defaultSettings.homepage, ...data.data?.homepage },
           seo: { ...defaultSettings.seo, ...data.data?.seo },
         });
@@ -446,6 +463,7 @@ export default function SettingsManagement({ onBack, initialTab = "commerce" }: 
         payment: { ...defaultSettings.payment, ...data.data?.payment },
         email: { ...defaultSettings.email, ...data.data?.email },
         inventory: { ...defaultSettings.inventory, ...data.data?.inventory },
+        media: { ...defaultSettings.media, ...data.data?.media },
         homepage: { ...defaultSettings.homepage, ...data.data?.homepage },
         seo: { ...defaultSettings.seo, ...data.data?.seo },
       });
@@ -734,6 +752,71 @@ export default function SettingsManagement({ onBack, initialTab = "commerce" }: 
                         </h2>
                         <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
                           <TextField label="Low Stock Threshold" value={settings.inventory.lowStockThreshold} onChange={(value) => updateSection("inventory", "lowStockThreshold", Number(value))} type="number" />
+                        </div>
+                      </section>
+
+                      <section className="border border-black/10 bg-[#fbfaf6] p-5">
+                        <h2 className="text-2xl font-light text-[#111]" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
+                          Media Storage
+                        </h2>
+                        <div className="mt-5 space-y-4">
+                          <div className="border border-[#d8c06a]/40 bg-[#fbf7ea] px-4 py-3 text-sm text-[#6f5a17]">
+                            Admin uploads and media deletions are now restricted to Admin and Manager accounts. Use Cloudinary in production so uploads survive deploys and restarts.
+                          </div>
+                          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <label className="block">
+                              <span className={sectionLabelClass}>Upload Storage</span>
+                              <select
+                                value={settings.media.uploadStorage}
+                                onChange={(event) => updateSection("media", "uploadStorage", event.target.value as "local" | "cloudinary")}
+                                className={inputClass}
+                              >
+                                <option value="local">Local</option>
+                                <option value="cloudinary">Cloudinary</option>
+                              </select>
+                            </label>
+                            <TextField
+                              label="Backend Public URL"
+                              value={settings.media.backendPublicUrl}
+                              onChange={(value) => updateSection("media", "backendPublicUrl", value)}
+                            />
+                          </div>
+                          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                            <div className="border border-black/10 bg-white p-4">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-gray-400">Cloudinary Credentials</p>
+                              <div className="mt-4 grid grid-cols-1 gap-4">
+                                <TextField
+                                  label="Cloud Name"
+                                  value={settings.media.cloudinaryCloudName}
+                                  onChange={(value) => updateSection("media", "cloudinaryCloudName", value)}
+                                />
+                                <TextField
+                                  label="API Key"
+                                  value={settings.media.cloudinaryApiKey}
+                                  onChange={(value) => updateSection("media", "cloudinaryApiKey", value)}
+                                />
+                                <TextField
+                                  label="API Secret"
+                                  value={settings.media.cloudinaryApiSecret}
+                                  onChange={(value) => updateSection("media", "cloudinaryApiSecret", value)}
+                                  type="password"
+                                />
+                              </div>
+                            </div>
+                            <div className="border border-black/10 bg-white p-4">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-gray-400">Upload Defaults</p>
+                              <div className="mt-4 grid grid-cols-1 gap-4">
+                                <TextField
+                                  label="Cloudinary Folder"
+                                  value={settings.media.cloudinaryFolder}
+                                  onChange={(value) => updateSection("media", "cloudinaryFolder", value)}
+                                />
+                                <div className="border border-black/10 bg-[#f8f6f0] px-4 py-3 text-xs text-gray-600">
+                                  Set the backend public URL when you use local storage behind a separate frontend domain. For Firebase App Hosting, this should be your live API base URL.
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </section>
                     </div>

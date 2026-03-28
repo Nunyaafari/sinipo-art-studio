@@ -122,7 +122,7 @@ export const initializeRuntimeDatabaseState = async () => {
 
       if (snapshot?.persistentState) {
         hydratePersistentState(snapshot.persistentState, {
-          persistToFile: true,
+          persistToFile: false,
           notifyHooks: false
         });
       }

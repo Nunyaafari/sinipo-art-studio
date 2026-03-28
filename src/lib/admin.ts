@@ -19,7 +19,7 @@ export const getRoleLabel = (role?: string | null) => {
     case "manager":
       return "Manager";
     case "admin_viewer":
-      return "User (View only)";
+      return "Viewer";
     case "user":
       return "Customer";
     default:

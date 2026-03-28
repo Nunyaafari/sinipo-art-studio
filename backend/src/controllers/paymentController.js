@@ -1,6 +1,7 @@
 import { getPaystackClient, hasPaystackConfig } from '../config/paystack.js';
 import { v4 as uuidv4 } from 'uuid';
 import { calculateShippingCost, calculateTaxAmount, getPaymentSettings } from '../config/storefront.js';
+import { getFrontendAppUrl } from '../config/appUrls.js';
 import { getUserByEmail } from './authController.js';
 import { calculateDiscountAmountForOrder, incrementDiscountUsage } from './admin/discountController.js';
 import {
@@ -21,6 +22,7 @@ import {
 
 const frameOptions = new Set(['Gold', 'Black', 'Silver', 'White', 'Walnut']);
 const roundCurrency = (value) => Math.round(value * 100) / 100;
+const frontendAppUrl = getFrontendAppUrl();
 const shouldUseMockPaymentMode = () => {
   return process.env.NODE_ENV !== 'production' && !hasPaystackConfig();
 };
@@ -202,7 +204,7 @@ export const initializePayment = async (req, res) => {
         success: true,
         data: {
           reference,
-          authorization_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/callback?reference=${reference}`,
+          authorization_url: `${frontendAppUrl}/payment/callback?reference=${reference}`,
           access_code: null,
           mode: 'mock'
         },
@@ -215,7 +217,7 @@ export const initializePayment = async (req, res) => {
       email: normalizedEmail,
       amount: amountInKobo,
       reference,
-      callback_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/callback`,
+      callback_url: `${frontendAppUrl}/payment/callback`,
       metadata: {
         custom_fields: [
           {

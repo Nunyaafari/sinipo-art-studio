@@ -125,3 +125,131 @@ test('blog admin routes validate payloads and persist successful posts', async (
   assert.equal(listResponse.body.success, true);
   assert.ok(listResponse.body.data.some((post) => post.title === 'Route Test Blog Post'));
 });
+
+test('upload routes require admin auth before accepting files', async (t) => {
+  resetPersistentState();
+  const serverHandle = await startTestServerOrSkip(t);
+  if (!serverHandle) {
+    return;
+  }
+
+  t.after(async () => {
+    await serverHandle.close();
+    resetPersistentState();
+  });
+
+  const unauthorizedResponse = await requestJson(serverHandle.baseUrl, '/api/upload/single', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({})
+  });
+
+  assert.equal(unauthorizedResponse.status, 401);
+
+  const adminToken = await loginAndGetToken(serverHandle.baseUrl);
+  const authorizedResponse = await requestJson(serverHandle.baseUrl, '/api/upload/single', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${adminToken}`
+    },
+    body: JSON.stringify({})
+  });
+
+  assert.equal(authorizedResponse.status, 400);
+  assert.equal(authorizedResponse.body.error, 'No file uploaded');
+});
+
+test('admin settings persist media storage configuration', async (t) => {
+  resetPersistentState();
+  const serverHandle = await startTestServerOrSkip(t);
+  if (!serverHandle) {
+    return;
+  }
+
+  t.after(async () => {
+    await serverHandle.close();
+    resetPersistentState();
+  });
+
+  const adminToken = await loginAndGetToken(serverHandle.baseUrl);
+  const adminHeaders = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${adminToken}`
+  };
+
+  const updateResponse = await requestJson(serverHandle.baseUrl, '/api/admin/settings', {
+    method: 'POST',
+    headers: adminHeaders,
+    body: JSON.stringify({
+      shipping: {
+        currency: 'USD',
+        freeShippingThreshold: 500,
+        standardShippingCost: 50,
+        shippingLabel: 'Standard delivery',
+        estimatedDelivery: '3-5 business days'
+      },
+      tax: {
+        enabled: false,
+        taxRate: 0,
+        taxLabel: 'Sales tax'
+      },
+      payment: {
+        paymentMode: 'test',
+        providerName: 'Paystack',
+        guestCheckoutEnabled: true,
+        livePublicKey: '',
+        liveSecretKey: '',
+        testPublicKey: 'pk_test_demo',
+        testSecretKey: 'sk_test_demo',
+        webhookSecret: '',
+        checkoutNotice: 'Sandbox mode'
+      },
+      email: {
+        providerName: 'SMTP',
+        fromName: 'Sinipo Art Studio',
+        fromAddress: 'hello@sinipo.art',
+        replyToAddress: 'hello@sinipo.art',
+        smtpHost: 'smtp.gmail.com',
+        smtpPort: 587,
+        smtpUser: '',
+        smtpPass: '',
+        secure: false,
+        orderConfirmationEnabled: true,
+        shippingUpdateEnabled: true,
+        newsletterEnabled: true
+      },
+      inventory: {
+        lowStockThreshold: 3
+      },
+      media: {
+        uploadStorage: 'cloudinary',
+        backendPublicUrl: 'https://api.sinipo.art',
+        cloudinaryCloudName: 'sinipo-demo',
+        cloudinaryApiKey: 'demo-key',
+        cloudinaryApiSecret: 'demo-secret',
+        cloudinaryFolder: 'sinipo-live'
+      },
+      homepage: {},
+      seo: {}
+    })
+  });
+
+  assert.equal(updateResponse.status, 200);
+  assert.equal(updateResponse.body.success, true);
+  assert.equal(updateResponse.body.data.media.uploadStorage, 'cloudinary');
+  assert.equal(updateResponse.body.data.media.cloudinaryFolder, 'sinipo-live');
+
+  const getResponse = await requestJson(serverHandle.baseUrl, '/api/admin/settings', {
+    headers: {
+      Authorization: `Bearer ${adminToken}`
+    }
+  });
+
+  assert.equal(getResponse.status, 200);
+  assert.equal(getResponse.body.success, true);
+  assert.equal(getResponse.body.data.media.backendPublicUrl, 'https://api.sinipo.art');
+  assert.equal(getResponse.body.data.media.cloudinaryCloudName, 'sinipo-demo');
+});

@@ -36,7 +36,7 @@ interface UserStats {
 const roleOptions = [
   { value: "admin", label: "Admin" },
   { value: "manager", label: "Manager" },
-  { value: "admin_viewer", label: "User (View only)" },
+  { value: "admin_viewer", label: "Viewer" },
   { value: "user", label: "Customer" },
 ] as const;
 
@@ -355,14 +355,14 @@ export default function UserManagement({ onBack, embedded = false }: UserManagem
 
   const statsSection = stats ? (
     <div className="grid grid-cols-2 gap-4 xl:grid-cols-6">
-      {[
-        { label: "Total Users", value: stats.total },
-        { label: "Verified", value: stats.verified },
-        { label: "Admins", value: stats.admins },
-        { label: "Managers", value: stats.managers },
-        { label: "View Only", value: stats.viewers },
-        { label: "Customers", value: stats.customers },
-      ].map((card) => (
+        {[
+          { label: "Total Users", value: stats.total },
+          { label: "Verified", value: stats.verified },
+          { label: "Admins", value: stats.admins },
+          { label: "Managers", value: stats.managers },
+          { label: "Viewers", value: stats.viewers },
+          { label: "Customers", value: stats.customers },
+        ].map((card) => (
         <div key={card.label} className="border border-black/10 bg-white px-4 py-5">
           <p className="text-[11px] uppercase tracking-[0.18em] text-gray-400">{card.label}</p>
           <p
@@ -380,12 +380,12 @@ export default function UserManagement({ onBack, embedded = false }: UserManagem
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
       <section className="border border-black/10 bg-white p-6">
         <div className="mb-5">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-gray-400">Create Internal User</p>
+          <p className="text-[11px] uppercase tracking-[0.18em] text-gray-400">Create Account</p>
           <h2
             className="mt-2 text-3xl font-light text-[#111]"
             style={{ fontFamily: "'Cormorant Garamond', serif" }}
           >
-            Add a teammate
+            Add a team or customer account
           </h2>
         </div>
 
@@ -439,12 +439,12 @@ export default function UserManagement({ onBack, embedded = false }: UserManagem
             disabled={submitting}
             className="w-full bg-[#111] px-5 py-3 text-[11px] tracking-[0.18em] text-white transition-colors hover:bg-[#c8a830] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {submitting ? "CREATING..." : "CREATE USER"}
+            {submitting ? "CREATING..." : "CREATE ACCOUNT"}
           </button>
         </form>
 
         <div className="mt-6 border border-[#d8c06a]/30 bg-[#fbf7ea] p-4 text-sm text-[#6f5a17]">
-          Admin has full control, Manager can edit operational areas, and User (View only) can enter the backend without making changes.
+          Admin has full control. Manager can edit operational areas. Viewer can sign into the backend in read-only mode. Customer accounts shop the storefront only and do not receive admin access.
         </div>
       </section>
 

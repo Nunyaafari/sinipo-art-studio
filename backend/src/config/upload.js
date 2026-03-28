@@ -4,23 +4,63 @@ import { v2 as cloudinary } from 'cloudinary';
 import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
+import { getMediaSettings } from './storefront.js';
 
 dotenv.config();
 
 const normalizeStorageMode = (value) =>
   value === 'cloudinary' ? 'cloudinary' : 'local';
 
-const hasCloudinaryConfig = () =>
+const normalizeFolder = (value) =>
+  typeof value === 'string' ? value.trim().replace(/^\/+|\/+$/g, '') : '';
+
+const getEffectiveMediaSettings = () => {
+  const settings = getMediaSettings();
+
+  return {
+    uploadStorage: normalizeStorageMode(settings?.uploadStorage || process.env.UPLOAD_STORAGE),
+    backendPublicUrl:
+      (settings?.backendPublicUrl || process.env.BACKEND_PUBLIC_URL || process.env.MEDIA_BASE_URL || '')
+        .trim()
+        .replace(/\/$/, ''),
+    cloudinaryCloudName: settings?.cloudinaryCloudName || process.env.CLOUDINARY_CLOUD_NAME || '',
+    cloudinaryApiKey: settings?.cloudinaryApiKey || process.env.CLOUDINARY_API_KEY || '',
+    cloudinaryApiSecret: settings?.cloudinaryApiSecret || process.env.CLOUDINARY_API_SECRET || '',
+    cloudinaryFolder: normalizeFolder(settings?.cloudinaryFolder || process.env.CLOUDINARY_FOLDER || 'sinipo-art')
+  };
+};
+
+const resolveCloudinaryFolder = (baseFolder, optionFolder) => {
+  const normalizedBaseFolder = normalizeFolder(baseFolder) || 'sinipo-art';
+  const normalizedOptionFolder = normalizeFolder(optionFolder);
+
+  if (!normalizedOptionFolder) {
+    return normalizedBaseFolder;
+  }
+
+  if (
+    normalizedOptionFolder === normalizedBaseFolder ||
+    normalizedOptionFolder.startsWith(`${normalizedBaseFolder}/`)
+  ) {
+    return normalizedOptionFolder;
+  }
+
+  const optionSuffix = normalizedOptionFolder.replace(/^sinipo-art\/?/, '');
+  return `${normalizedBaseFolder}/${optionSuffix}`;
+};
+
+const hasCloudinaryConfig = (settings = getEffectiveMediaSettings()) =>
   Boolean(
-    process.env.CLOUDINARY_CLOUD_NAME &&
-    process.env.CLOUDINARY_API_KEY &&
-    process.env.CLOUDINARY_API_SECRET
+    settings.cloudinaryCloudName &&
+    settings.cloudinaryApiKey &&
+    settings.cloudinaryApiSecret
   );
 
 export const getUploadStorageMode = () => {
-  const configuredMode = normalizeStorageMode(process.env.UPLOAD_STORAGE);
+  const settings = getEffectiveMediaSettings();
+  const configuredMode = settings.uploadStorage;
 
-  if (configuredMode === 'cloudinary' && hasCloudinaryConfig()) {
+  if (configuredMode === 'cloudinary' && hasCloudinaryConfig(settings)) {
     return 'cloudinary';
   }
 
@@ -28,8 +68,7 @@ export const getUploadStorageMode = () => {
 };
 
 const getBackendPublicBaseUrl = () => {
-  const configuredBaseUrl = process.env.BACKEND_PUBLIC_URL || process.env.MEDIA_BASE_URL || '';
-  return configuredBaseUrl.trim().replace(/\/$/, '');
+  return getEffectiveMediaSettings().backendPublicUrl;
 };
 
 const toServedAssetUrl = (filePath) => {
@@ -43,12 +82,19 @@ const toServedAssetUrl = (filePath) => {
   return backendPublicBaseUrl ? `${backendPublicBaseUrl}${publicPath}` : publicPath;
 };
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+const configureCloudinary = (settings = getEffectiveMediaSettings()) => {
+  if (!hasCloudinaryConfig(settings)) {
+    return false;
+  }
+
+  cloudinary.config({
+    cloud_name: settings.cloudinaryCloudName,
+    api_key: settings.cloudinaryApiKey,
+    api_secret: settings.cloudinaryApiSecret,
+  });
+
+  return true;
+};
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(process.cwd(), 'uploads');
@@ -153,8 +199,9 @@ export const optimizeImage = async (inputPath, outputPath, options = {}) => {
   }
 };
 
-// Upload to Cloudinary (disabled - using local storage only)
 export const uploadToCloudinary = async (filePath, options = {}) => {
+  const mediaSettings = getEffectiveMediaSettings();
+
   if (getUploadStorageMode() !== 'cloudinary') {
     return {
       success: true,
@@ -168,9 +215,16 @@ export const uploadToCloudinary = async (filePath, options = {}) => {
     };
   }
 
+  if (!configureCloudinary(mediaSettings)) {
+    return {
+      success: false,
+      error: 'Cloudinary storage is enabled, but credentials are incomplete.'
+    };
+  }
+
   try {
     const result = await cloudinary.uploader.upload(filePath, {
-      folder: options.folder,
+      folder: resolveCloudinaryFolder(mediaSettings.cloudinaryFolder, options.folder),
       public_id: options.public_id,
       transformation: options.transformation,
       overwrite: true,
@@ -198,10 +252,19 @@ export const uploadToCloudinary = async (filePath, options = {}) => {
 
 // Delete from Cloudinary
 export const deleteFromCloudinary = async (public_id) => {
+  const mediaSettings = getEffectiveMediaSettings();
+
   if (getUploadStorageMode() !== 'cloudinary' || !public_id) {
     return {
       success: true,
       skipped: true
+    };
+  }
+
+  if (!configureCloudinary(mediaSettings)) {
+    return {
+      success: false,
+      error: 'Cloudinary storage is enabled, but credentials are incomplete.'
     };
   }
 

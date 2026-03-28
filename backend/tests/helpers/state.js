@@ -1,6 +1,18 @@
 import { getPersistentStateSnapshot, hydratePersistentState } from '../../src/storage/persistentState.js';
 
-const baselineSnapshot = getPersistentStateSnapshot();
+const sourceSnapshot = getPersistentStateSnapshot();
+const baselineSnapshot = {
+  ...sourceSnapshot,
+  users: [],
+  orders: {},
+  inventoryMovements: [],
+  adminAuditLogs: [],
+  userWishlists: {},
+  userAddresses: {},
+  userOrderHistory: {},
+  userReviews: {},
+  loyaltyPoints: {}
+};
 
 export const resetPersistentState = () =>
   hydratePersistentState(baselineSnapshot, {
