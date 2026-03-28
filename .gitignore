@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.production
+coverage/
+.DS_Store
+
+backend/node_modules/
+backend/.env
+backend/logs/
+backend/uploads/
+backend/backups/
+backend/src/storage/persistent-data.json

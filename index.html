@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Primary Meta Tags -->
+    <title>Sinipo Art Studio — Premium Art & Fashion | Stronger Together</title>
+    <meta name="title" content="Sinipo Art Studio — Premium Art & Fashion | Stronger Together" />
+    <meta name="description" content="Discover stunning artworks and fashion pieces at Sinipo Art Studio. Premium quality, curated collections, worldwide shipping. Where art meets fashion." />
+    <meta name="keywords" content="art, fashion, premium, gallery, contemporary, modern, abstract, paintings, designer clothing, luxury, curated, worldwide shipping" />
+    <meta name="author" content="Sinipo Art Studio" />
+    <meta name="robots" content="index, follow" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://sinipo.art/" />
+    <meta property="og:title" content="Sinipo Art Studio — Premium Art & Fashion" />
+    <meta property="og:description" content="Discover stunning artworks and fashion pieces at Sinipo Art Studio. Premium quality, curated collections, worldwide shipping." />
+    <meta property="og:image" content="https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=1200&q=80" />
+    <meta property="og:site_name" content="Sinipo Art Studio" />
+    <meta property="og:locale" content="en_US" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://sinipo.art/" />
+    <meta property="twitter:title" content="Sinipo Art Studio — Premium Art & Fashion" />
+    <meta property="twitter:description" content="Discover stunning artworks and fashion pieces at Sinipo Art Studio. Premium quality, curated collections, worldwide shipping." />
+    <meta property="twitter:image" content="https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=1200&q=80" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x12" href="/favicon-sinipo.png" />
+    <link rel="shortcut icon" href="/favicon-sinipo.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://sinipo.art/" />
+    
+    <!-- Preconnect to external domains -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://images.unsplash.com" />
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+    
+    <!-- Schema.org markup for Google -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Sinipo Art Studio",
+      "url": "https://sinipo.art/",
+      "description": "Premium art and fashion e-commerce website",
+      "publisher": {
+        "@type": "Organization",
+        "name": "Sinipo Art Studio",
+        "logo": "https://sinipo.art/logo.png"
+      },
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://sinipo.art/shop?search={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+    
+    <!-- Organization Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Sinipo Art Studio",
+      "alternateName": "Sinipo Studio",
+      "url": "https://sinipo.art/",
+      "logo": "https://sinipo.art/logo.png",
+      "description": "Premium art and fashion studio offering curated collections of contemporary artworks and designer fashion pieces.",
+      "address": {
+        "@type": "PostalAddress",
+        "addressCountry": "NG",
+        "addressLocality": "Lagos"
+      },
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": "+234-800-000-0000",
+        "contactType": "customer service",
+        "email": "hello@sinipo.art"
+      },
+      "sameAs": [
+        "https://instagram.com/sinipo.art",
+        "https://facebook.com/sinipo.art",
+        "https://pinterest.com/sinipo.art"
+      ],
+      "slogan": "Where Art Meets Fashion"
+    }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+      // Keep service workers out of development so stale cached assets don't mask local changes.
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', async () => {
+          if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(registrations.map((registration) => registration.unregister()));
+            return;
+          }
+
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('SW registered: ', registration);
+            })
+            .catch((registrationError) => {
+              console.log('SW registration failed: ', registrationError);
+            });
+        });
+      }
+    </script>
+  </body>
+</html>
