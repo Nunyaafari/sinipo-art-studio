@@ -50,14 +50,44 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AUTH_TOKEN_KEY = 'authToken';
+const AUTH_USER_KEY = 'authUser';
+
+const loadStoredUser = (): User | null => {
+  const rawUser = localStorage.getItem(AUTH_USER_KEY);
+  if (!rawUser) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(rawUser) as User;
+  } catch {
+    localStorage.removeItem(AUTH_USER_KEY);
+    return null;
+  }
+};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('authToken'));
+  const [user, setUser] = useState<User | null>(() => loadStoredUser());
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem(AUTH_TOKEN_KEY));
   const [bootstrapStatus, setBootstrapStatus] = useState<BootstrapStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const API_BASE = apiUrl('/api/auth');
+
+  const persistSession = (nextUser: User, nextToken: string) => {
+    setUser(nextUser);
+    setToken(nextToken);
+    localStorage.setItem(AUTH_TOKEN_KEY, nextToken);
+    localStorage.setItem(AUTH_USER_KEY, JSON.stringify(nextUser));
+  };
+
+  const clearSession = () => {
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem(AUTH_USER_KEY);
+  };
 
   const refreshBootstrapStatus = async () => {
     try {
@@ -85,16 +115,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           if (response.ok) {
             const data = await parseJsonResponse<{ data?: User }>(response);
-            setUser(data.data);
-          } else {
-            // Token is invalid, remove it
-            localStorage.removeItem('authToken');
-            setToken(null);
+            if (data?.data) {
+              setUser(data.data);
+              localStorage.setItem(AUTH_USER_KEY, JSON.stringify(data.data));
+            }
+          } else if (response.status === 401 || response.status === 403) {
+            clearSession();
           }
         } catch (error) {
           console.error('Auth check failed:', error);
-          localStorage.removeItem('authToken');
-          setToken(null);
         }
       }
       setIsLoading(false);
@@ -120,9 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await parseJsonResponse<{ success?: boolean; data?: { user: User; token: string }; error?: string }>(response);
 
       if (response.ok && data?.success && data.data?.user && data.data?.token) {
-        setUser(data.data.user);
-        setToken(data.data.token);
-        localStorage.setItem('authToken', data.data.token);
+        persistSession(data.data.user, data.data.token);
         void refreshBootstrapStatus();
         return { success: true, message: 'Login successful', user: data.data.user };
       } else {
@@ -151,9 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await parseJsonResponse<{ success?: boolean; data?: { user: User; token: string }; error?: string }>(response);
 
       if (response.ok && data?.success && data.data?.user && data.data?.token) {
-        setUser(data.data.user);
-        setToken(data.data.token);
-        localStorage.setItem('authToken', data.data.token);
+        persistSession(data.data.user, data.data.token);
         void refreshBootstrapStatus();
         return {
           success: true,
@@ -193,9 +218,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
 
       if (response.ok && data?.success && data.data?.user && data.data?.token) {
-        setUser(data.data.user);
-        setToken(data.data.token);
-        localStorage.setItem('authToken', data.data.token);
+        persistSession(data.data.user, data.data.token);
         void refreshBootstrapStatus();
         return { success: true, message: 'Admin account created successfully', user: data.data.user };
       }
@@ -220,9 +243,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await parseJsonResponse<{ success?: boolean; data?: { user: User; token: string }; error?: string }>(response);
 
       if (response.ok && data?.success && data.data?.user && data.data?.token) {
-        setUser(data.data.user);
-        setToken(data.data.token);
-        localStorage.setItem('authToken', data.data.token);
+        persistSession(data.data.user, data.data.token);
         void refreshBootstrapStatus();
         return { success: true, message: 'Registration successful', user: data.data.user };
       } else {
@@ -247,9 +268,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      setUser(null);
-      setToken(null);
-      localStorage.removeItem('authToken');
+      clearSession();
     }
   };
 
@@ -268,6 +287,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (result.success) {
         setUser(result.data);
+        localStorage.setItem(AUTH_USER_KEY, JSON.stringify(result.data));
         return { success: true, message: 'Profile updated successfully' };
       } else {
         return { success: false, message: result.error || 'Update failed' };
