@@ -3,6 +3,7 @@ import { authenticateToken } from '../middleware/auth/jwtAuth.js';
 import {
   register,
   login,
+  socialLogin,
   getBootstrapStatus,
   bootstrapAdmin,
   getProfile,
@@ -23,6 +24,7 @@ router.get('/bootstrap-status', getBootstrapStatus);
 router.post('/bootstrap-admin', bootstrapAdmin);
 router.post('/register', register);
 router.post('/login', login);
+router.post('/social-login', socialLogin);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
 router.post('/verify-email', verifyEmail);

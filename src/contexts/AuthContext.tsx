@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { apiUrl, getNetworkErrorMessage, parseJsonResponse } from '../lib/api';
+import { signInWithSocialProvider } from '../lib/firebaseAuth';
 
 interface User {
   id: number;
@@ -35,6 +36,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<AuthResult>;
+  socialLogin: (provider: "google" | "facebook") => Promise<AuthResult>;
   bootstrapAdmin: (email: string, password: string, firstName: string, lastName: string) => Promise<AuthResult>;
   register: (email: string, password: string, firstName: string, lastName: string) => Promise<AuthResult>;
   logout: () => void;
@@ -129,6 +131,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Login error:', error);
       return { success: false, message: getNetworkErrorMessage(error, 'Network error. Please try again.') };
+    }
+  };
+
+  const socialLogin = async (provider: "google" | "facebook") => {
+    try {
+      const socialSession = await signInWithSocialProvider(provider);
+      const response = await fetch(`${API_BASE}/social-login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          provider,
+          idToken: socialSession.idToken
+        })
+      });
+
+      const data = await parseJsonResponse<{ success?: boolean; data?: { user: User; token: string }; error?: string }>(response);
+
+      if (response.ok && data?.success && data.data?.user && data.data?.token) {
+        setUser(data.data.user);
+        setToken(data.data.token);
+        localStorage.setItem('authToken', data.data.token);
+        void refreshBootstrapStatus();
+        return {
+          success: true,
+          message: `${provider === "google" ? "Google" : "Facebook"} login successful`,
+          user: data.data.user
+        };
+      }
+
+      return {
+        success: false,
+        message: data?.error || `${provider === "google" ? "Google" : "Facebook"} login failed`
+      };
+    } catch (error) {
+      console.error(`${provider} login error:`, error);
+      return {
+        success: false,
+        message: getNetworkErrorMessage(
+          error,
+          `${provider === "google" ? "Google" : "Facebook"} login failed. Please try again.`
+        )
+      };
     }
   };
 
@@ -358,6 +404,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: !!user,
     isLoading,
     login,
+    socialLogin,
     bootstrapAdmin,
     register,
     logout,

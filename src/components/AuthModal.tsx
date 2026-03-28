@@ -22,7 +22,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login", onAu
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const { login, register, forgotPassword, resetPassword } = useAuth();
+  const { login, socialLogin, register, forgotPassword, resetPassword } = useAuth();
 
   const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
@@ -37,11 +37,26 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login", onAu
     setMessage(null);
   };
 
-  const handleUnavailableSocialLogin = (provider: "Google" | "Facebook") => {
-    setMessage({
-      type: "error",
-      text: `${provider} sign-in is not configured yet. Please use email and password for now.`,
-    });
+  const handleSocialLogin = async (provider: "google" | "facebook") => {
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      const result = await socialLogin(provider);
+
+      if (result.success) {
+        setMessage({ type: "success", text: result.message });
+        setTimeout(() => {
+          onAuthSuccess?.(hasAdminPanelAccess(result.user?.role) ? "admin" : "profile");
+          onClose();
+          resetForm();
+        }, 1200);
+      } else {
+        setMessage({ type: "error", text: result.message });
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -400,7 +415,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login", onAu
                 <div className="mt-6 grid grid-cols-2 gap-4">
                   <button
                     type="button"
-                    onClick={() => handleUnavailableSocialLogin("Google")}
+                    onClick={() => void handleSocialLogin("google")}
+                    disabled={loading}
                     className="flex items-center justify-center gap-2 border border-gray-200 py-3 text-xs tracking-wider text-gray-600 hover:border-gray-400 transition-colors"
                     style={{ fontFamily: "'Montserrat', sans-serif" }}
                   >
@@ -414,7 +430,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login", onAu
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleUnavailableSocialLogin("Facebook")}
+                    onClick={() => void handleSocialLogin("facebook")}
+                    disabled={loading}
                     className="flex items-center justify-center gap-2 border border-gray-200 py-3 text-xs tracking-wider text-gray-600 hover:border-gray-400 transition-colors"
                     style={{ fontFamily: "'Montserrat', sans-serif" }}
                   >
@@ -429,7 +446,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login", onAu
                   className="mt-3 text-center text-[11px] tracking-[0.12em] text-gray-400"
                   style={{ fontFamily: "'Montserrat', sans-serif" }}
                 >
-                  Social sign-in will appear here after Google and Facebook auth are configured.
+                  Use Google or Facebook to create a customer account instantly once those providers are enabled in Firebase.
                 </p>
               </div>
             )}

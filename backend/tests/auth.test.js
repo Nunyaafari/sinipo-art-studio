@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { login, register } from '../src/controllers/authController.js';
+import { login, register, socialLogin } from '../src/controllers/authController.js';
 import { createMockRequest, createMockResponse } from './helpers/http.js';
 import { resetPersistentState } from './helpers/state.js';
 
@@ -67,4 +67,51 @@ test('register and login succeed with normalized email', async () => {
   assert.equal(loginRes.body.success, true);
   assert.ok(loginRes.body.data.token);
   assert.equal(loginRes.body.data.user.email, uniqueEmail);
+});
+
+test('social login creates a customer account from a verified Firebase identity token', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      users: [
+        {
+          localId: 'firebase-user-123',
+          email: 'social.customer@example.com',
+          emailVerified: true,
+          displayName: 'Social Customer',
+          providerUserInfo: [
+            {
+              providerId: 'google.com',
+              rawId: 'google-raw-123',
+              displayName: 'Social Customer',
+            },
+          ],
+        },
+      ],
+    }),
+  });
+
+  try {
+    const req = createMockRequest({
+      method: 'POST',
+      originalUrl: '/api/auth/social-login',
+      body: {
+        provider: 'google',
+        idToken: 'firebase-id-token'
+      }
+    });
+    const res = createMockResponse();
+
+    await socialLogin(req, res);
+
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.success, true);
+    assert.equal(res.body.data.user.email, 'social.customer@example.com');
+    assert.equal(res.body.data.user.role, 'user');
+    assert.equal(res.body.data.user.socialProvider, 'google.com');
+    assert.ok(res.body.data.token);
+  } finally {
+    global.fetch = originalFetch;
+  }
 });

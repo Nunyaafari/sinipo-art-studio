@@ -32,6 +32,11 @@ const getSafeUserId = (user) => {
   const parsed = Number.parseInt(user?.id, 10);
   return Number.isFinite(parsed) ? parsed : 0;
 };
+const DEFAULT_FIREBASE_WEB_API_KEY = 'AIzaSyBVW6_VxOrMt0gVbDExj8I1SWubk1Crntw';
+const SOCIAL_PROVIDER_MAP = {
+  google: 'google.com',
+  facebook: 'facebook.com'
+};
 const getSafePasswordHash = (user) => (typeof user?.password === 'string' ? user.password : '');
 const findUserByEmail = (email) => {
   const normalizedEmail = normalizeEmail(email);
@@ -43,6 +48,84 @@ const getSafeUsers = () => users.filter((user) => normalizeEmail(user?.email));
 const getAdminCount = () => users.filter((user) => user?.role === 'admin').length;
 
 const JWT_EXPIRES_IN = '7d';
+const getFirebaseWebApiKey = () =>
+  process.env.FIREBASE_WEB_API_KEY || process.env.VITE_FIREBASE_API_KEY || DEFAULT_FIREBASE_WEB_API_KEY;
+
+const splitDisplayName = (displayName = '') => {
+  const [firstName = '', ...rest] = normalizeString(displayName).split(' ').filter(Boolean);
+
+  return {
+    firstName,
+    lastName: rest.join(' ')
+  };
+};
+
+const createAuthResponse = (user, message) => {
+  const token = generateToken(user.id);
+  const { password: _, verificationToken: __, ...userWithoutSensitiveData } = user;
+
+  return {
+    success: true,
+    message,
+    data: {
+      user: userWithoutSensitiveData,
+      token
+    }
+  };
+};
+
+const verifyFirebaseIdentityToken = async (provider, idToken) => {
+  const normalizedProvider = SOCIAL_PROVIDER_MAP[provider];
+  if (!normalizedProvider) {
+    throw Object.assign(new Error('Unsupported social login provider'), { statusCode: 400 });
+  }
+
+  if (typeof idToken !== 'string' || !idToken.trim()) {
+    throw Object.assign(new Error('A social identity token is required'), { statusCode: 400 });
+  }
+
+  const response = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${getFirebaseWebApiKey()}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ idToken: idToken.trim() })
+    }
+  );
+
+  const payload = await response.json().catch(() => ({}));
+  const account = Array.isArray(payload?.users) ? payload.users[0] : null;
+
+  if (!response.ok || !account) {
+    throw Object.assign(new Error('Unable to verify the social sign-in session'), { statusCode: 401 });
+  }
+
+  const providerInfo = Array.isArray(account.providerUserInfo)
+    ? account.providerUserInfo.find((entry) => entry?.providerId === normalizedProvider)
+    : null;
+
+  if (!providerInfo && account?.providerUserInfo?.length) {
+    throw Object.assign(new Error('This social account is linked to a different provider'), {
+      statusCode: 401
+    });
+  }
+
+  const email = assertValidEmail(account.email, 'A verified email is required for social sign-in');
+  const displayName = providerInfo?.displayName || account.displayName || '';
+  const parsedName = splitDisplayName(displayName);
+
+  return {
+    email,
+    emailVerified: account.emailVerified !== false,
+    firebaseUid: account.localId || providerInfo?.rawId || null,
+    firstName: parsedName.firstName || normalizeString(account.firstName),
+    lastName: parsedName.lastName || normalizeString(account.lastName),
+    providerId: normalizedProvider,
+    providerAccountId: providerInfo?.rawId || account.localId || null
+  };
+};
 
 // Generate JWT Token
 const generateToken = (userId) => {
@@ -95,20 +178,7 @@ export const register = async (req, res) => {
     users.push(newUser);
     savePersistentState();
 
-    // Generate token
-    const token = generateToken(newUser.id);
-
-    // Return user data (without password)
-    const { password: _, verificationToken: __, ...userWithoutSensitiveData } = newUser;
-
-    res.status(201).json({
-      success: true,
-      message: 'User registered successfully',
-      data: {
-        user: userWithoutSensitiveData,
-        token
-      }
-    });
+    res.status(201).json(createAuthResponse(newUser, 'User registered successfully'));
 
   } catch (error) {
     console.error('Registration error:', error);
@@ -153,25 +223,12 @@ export const login = async (req, res) => {
       });
     }
 
-    // Generate token
-    const token = generateToken(user.id);
-
     // Update last login
     user.lastLogin = new Date().toISOString();
     user.updatedAt = new Date().toISOString();
     savePersistentState();
 
-    // Return user data (without password)
-    const { password: _, verificationToken: __, ...userWithoutSensitiveData } = user;
-
-    res.json({
-      success: true,
-      message: 'Login successful',
-      data: {
-        user: userWithoutSensitiveData,
-        token
-      }
-    });
+    res.json(createAuthResponse(user, 'Login successful'));
 
   } catch (error) {
     console.error('Login error:', error);
@@ -241,22 +298,64 @@ export const bootstrapAdmin = async (req, res) => {
     users.push(adminUser);
     savePersistentState();
 
-    const token = generateToken(adminUser.id);
-    const { password: _, verificationToken: __, ...userWithoutSensitiveData } = adminUser;
-
-    return res.status(201).json({
-      success: true,
-      message: 'Admin account created successfully',
-      data: {
-        user: userWithoutSensitiveData,
-        token
-      }
-    });
+    return res.status(201).json(createAuthResponse(adminUser, 'Admin account created successfully'));
   } catch (error) {
     console.error('Admin bootstrap error:', error);
     const statusCode = error.statusCode || 500;
     return res.status(statusCode).json({
       error: statusCode === 500 ? 'Admin setup failed' : error.message,
+      message: error.message
+    });
+  }
+};
+
+export const socialLogin = async (req, res) => {
+  try {
+    const { provider, idToken } = req.body;
+    const socialAccount = await verifyFirebaseIdentityToken(provider, idToken);
+    const existingUser = findUserByEmail(socialAccount.email);
+    const timestamp = new Date().toISOString();
+
+    let user;
+
+    if (existingUser) {
+      existingUser.firstName = existingUser.firstName || socialAccount.firstName || 'Customer';
+      existingUser.lastName = existingUser.lastName || socialAccount.lastName || provider;
+      existingUser.isVerified = socialAccount.emailVerified || existingUser.isVerified;
+      existingUser.socialProvider = socialAccount.providerId;
+      existingUser.socialProviderAccountId = socialAccount.providerAccountId;
+      existingUser.firebaseUid = socialAccount.firebaseUid;
+      existingUser.lastLogin = timestamp;
+      existingUser.updatedAt = timestamp;
+      user = existingUser;
+    } else {
+      user = {
+        id: getNextUserId(),
+        email: socialAccount.email,
+        password: null,
+        firstName: socialAccount.firstName || 'Customer',
+        lastName: socialAccount.lastName || (provider === 'google' ? 'Google' : 'Facebook'),
+        role: 'user',
+        isVerified: socialAccount.emailVerified,
+        socialProvider: socialAccount.providerId,
+        socialProviderAccountId: socialAccount.providerAccountId,
+        firebaseUid: socialAccount.firebaseUid,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        lastLogin: timestamp
+      };
+
+      users.push(user);
+    }
+
+    savePersistentState();
+
+    res.json(createAuthResponse(user, `${provider === 'google' ? 'Google' : 'Facebook'} login successful`));
+  } catch (error) {
+    console.error('Social login error:', error);
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({
+      error: statusCode === 500 ? 'Social login failed' : error.message,
       message: error.message
     });
   }
