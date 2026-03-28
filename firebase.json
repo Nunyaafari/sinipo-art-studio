@@ -23,7 +23,7 @@
       "**/node_modules/**"
     ],
     "predeploy": [
-      "npm run build"
+      "VITE_API_BASE_URL=https://sinipo-art-api--sinipo-art-studio-627c1.us-east4.hosted.app npm run build"
     ],
     "rewrites": [
       {
