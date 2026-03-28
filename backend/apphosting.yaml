@@ -7,6 +7,10 @@ outputFiles:
     include:
       - .
 
+runConfig:
+  minInstances: 1
+  maxInstances: 1
+
 env:
   - variable: JWT_SECRET
     secret: JWT_SECRET
