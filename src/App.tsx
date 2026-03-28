@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { AuthProvider } from "./contexts/AuthContext";
+import { useState, useEffect, useRef } from "react";
+import { AUTH_STORAGE_SYNC_EVENT, AuthProvider } from "./contexts/AuthContext";
 import Navbar from "./components/Navbar";
 import HomePage from "./components/HomePage";
 import ShopPage from "./components/ShopPage";
@@ -46,11 +46,13 @@ interface ReorderItem {
 }
 
 const CART_STORAGE_KEY = "sinipoCart";
+const CART_GUEST_SCOPE = "guest";
 
-const loadStoredCart = (): CartItem[] => {
-  const rawValue = localStorage.getItem(CART_STORAGE_KEY);
+const getScopedCartStorageKey = (scope: string) => `${CART_STORAGE_KEY}:${scope}`;
+
+const parseStoredCart = (rawValue: string | null): CartItem[] | null => {
   if (!rawValue) {
-    return [];
+    return null;
   }
 
   try {
@@ -71,9 +73,42 @@ const loadStoredCart = (): CartItem[] => {
       );
     });
   } catch {
-    localStorage.removeItem(CART_STORAGE_KEY);
     return [];
   }
+};
+
+const getCartScope = () => {
+  const rawUser = localStorage.getItem("authUser");
+  if (!rawUser) {
+    return CART_GUEST_SCOPE;
+  }
+
+  try {
+    const userId = Number.parseInt(String(JSON.parse(rawUser)?.id ?? ""), 10);
+    return Number.isFinite(userId) ? `user:${userId}` : CART_GUEST_SCOPE;
+  } catch {
+    return CART_GUEST_SCOPE;
+  }
+};
+
+const loadStoredCart = (scope = CART_GUEST_SCOPE): CartItem[] => {
+  const scopedCart = parseStoredCart(localStorage.getItem(getScopedCartStorageKey(scope)));
+  if (scopedCart) {
+    return scopedCart;
+  }
+
+  if (scope !== CART_GUEST_SCOPE) {
+    return [];
+  }
+
+  const legacyCart = parseStoredCart(localStorage.getItem(CART_STORAGE_KEY));
+  if (legacyCart) {
+    localStorage.setItem(getScopedCartStorageKey(CART_GUEST_SCOPE), JSON.stringify(legacyCart));
+    localStorage.removeItem(CART_STORAGE_KEY);
+    return legacyCart;
+  }
+
+  return [];
 };
 
 const getStoredRole = () => {
@@ -93,7 +128,10 @@ export default function App() {
   const [activePage, setActivePage] = useState("home");
   const [productReturnPage, setProductReturnPage] = useState("home");
   const [cartOpen, setCartOpen] = useState(false);
-  const [cartItems, setCartItems] = useState<CartItem[]>(() => loadStoredCart());
+  const [cartScope, setCartScope] = useState(() => getCartScope());
+  const [cartItems, setCartItems] = useState<CartItem[]>(() => loadStoredCart(getCartScope()));
+  const cartItemsRef = useRef<CartItem[]>(loadStoredCart(getCartScope()));
+  const cartScopeRef = useRef(cartScope);
   const [selectedArtwork, setSelectedArtwork] = useState<Product | null>(null);
   const [showCheckout, setShowCheckout] = useState(false);
   const [showOrderManagement, setShowOrderManagement] = useState(false);
@@ -152,8 +190,42 @@ export default function App() {
   ]);
 
   useEffect(() => {
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
-  }, [cartItems]);
+    cartItemsRef.current = cartItems;
+    localStorage.setItem(getScopedCartStorageKey(cartScope), JSON.stringify(cartItems));
+    localStorage.removeItem(CART_STORAGE_KEY);
+  }, [cartItems, cartScope]);
+
+  useEffect(() => {
+    cartScopeRef.current = cartScope;
+  }, [cartScope]);
+
+  const syncCartScope = () => {
+    const nextScope = getCartScope();
+    if (nextScope === cartScopeRef.current) {
+      return;
+    }
+
+    localStorage.setItem(
+      getScopedCartStorageKey(cartScopeRef.current),
+      JSON.stringify(cartItemsRef.current)
+    );
+
+    const nextCart = loadStoredCart(nextScope);
+    cartScopeRef.current = nextScope;
+    setCartScope(nextScope);
+    setCartItems(nextCart);
+  };
+
+  useEffect(() => {
+    const handleAuthStorageSync = () => {
+      syncCartScope();
+    };
+
+    window.addEventListener(AUTH_STORAGE_SYNC_EVENT, handleAuthStorageSync);
+    return () => {
+      window.removeEventListener(AUTH_STORAGE_SYNC_EVENT, handleAuthStorageSync);
+    };
+  }, []);
 
   const openLoginModal = (mode: "login" | "register") => {
     setAuthModalMode(mode);
@@ -429,6 +501,7 @@ export default function App() {
   };
 
   const handleCustomerAuthSuccess = (destination: "profile" | "admin") => {
+    syncCartScope();
     setShowAuthModal(false);
     setShowCheckout(false);
     setSelectedArtwork(null);

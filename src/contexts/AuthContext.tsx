@@ -56,6 +56,13 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const AUTH_TOKEN_KEY = 'authToken';
 const AUTH_USER_KEY = 'authUser';
+export const AUTH_STORAGE_SYNC_EVENT = 'sinipo-auth-storage-changed';
+
+const dispatchAuthStorageSync = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(AUTH_STORAGE_SYNC_EVENT));
+  }
+};
 
 const loadStoredUser = (): User | null => {
   const rawUser = localStorage.getItem(AUTH_USER_KEY);
@@ -84,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(nextToken);
     localStorage.setItem(AUTH_TOKEN_KEY, nextToken);
     localStorage.setItem(AUTH_USER_KEY, JSON.stringify(nextUser));
+    dispatchAuthStorageSync();
   };
 
   const clearSession = () => {
@@ -91,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
     localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem(AUTH_USER_KEY);
+    dispatchAuthStorageSync();
   };
 
   const refreshBootstrapStatus = async () => {
